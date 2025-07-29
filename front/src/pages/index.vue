@@ -296,15 +296,12 @@ export default defineComponent({
       this.addEventDialog = true;
     },
     saveNewEvent() {
-      if (this.newEvent.name && this.newEvent.date) {
-        this.events.push({ ...this.newEvent }); // Adiciona uma cópia do newEvent
-        this.addEventDialog = false; // Fecha o diálogo
-        this.selectedEvent = {}; // Limpa o evento selecionado para exibir a mensagem padrão ou novo evento
-        // Opcional: Você pode querer selecionar o evento recém-adicionado
-        // this.showEventDetails(this.newEvent);
-      } else {
-        alert("Por favor, preencha o nome do evento.");
+      let teste
+
+      const params = {
+        teste: teste
       }
+      this.HTTP("post", '/ministracoes/add-ministracao', params)
     },
   },
 });
