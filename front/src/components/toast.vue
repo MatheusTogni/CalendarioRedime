@@ -30,7 +30,7 @@ export default {
       this.show = true;
     },
     getColorByType(type) {
-      console.log(type);
+
       switch (type) {
         case "success":
           return "purple lighten-1";

@@ -36,7 +36,6 @@
           class="calendar-day d-flex flex-column align-center justify-start pa-1"
           :class="{
             'text-grey-lighten-1': !dayInfo.isCurrentMonth,
-            'current-day': dayInfo.isToday,
             'has-events': getEventsForDay(dayInfo.date).length > 0,
           }"
           @click="openAddEventDialog(dayInfo.date)"
@@ -71,9 +70,23 @@
       <v-card-text class="event-details-text">
         <p class="mb-2"><strong>Data:</strong> {{ selectedEvent.date }}</p>
         <p><strong>Descrição:</strong> {{ selectedEvent.description }}</p>
-        <p v-if="selectedEvent.people && selectedEvent.people.length > 0">
-          <strong>Pessoas:</strong> {{ selectedEvent.people.join(", ") }}
+        <p v-if="selectedEvent.people">
+          <strong>Pessoas:</strong> {{ selectedEvent.people }}
         </p>
+
+        <div class="mt-4 d-flex justify-center gap-4">
+          <v-btn
+            class="mr-8"
+            icon
+            color="deep-purple-darken-2"
+            @click="editSelectedEvent"
+          >
+            <v-icon>mdi-pencil</v-icon>
+          </v-btn>
+          <v-btn icon color="red-darken-2" @click="deleteSelectedEvent">
+            <v-icon>mdi-delete</v-icon>
+          </v-btn>
+        </div>
       </v-card-text>
     </v-sheet>
 
@@ -137,7 +150,97 @@
           <v-btn variant="flat" color="red" @click="addEventDialog = false"
             >Cancelar</v-btn
           >
-          <v-btn variant="flat" color="#6A1B9A" @click="saveNewEvent">Salvar</v-btn>
+          <v-btn
+            :loading="loadingSalvar"
+            variant="flat"
+            color="#6A1B9A"
+            @click="saveNewEvent"
+            >Salvar</v-btn
+          >
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-dialog v-model="editEventDialog" max-width="500px">
+      <v-card class="add-event-dialog-title" rounded="lg" elevation="8">
+        <v-card-title class="text-h6 add-event-dialog-title">
+          Editar Ministração
+        </v-card-title>
+        <v-card-text>
+          <v-text-field
+            v-model="editEvent.name"
+            label="Nome do Evento"
+            variant="outlined"
+            density="compact"
+            class="mb-3"
+          ></v-text-field>
+          <v-textarea
+            v-model="editEvent.description"
+            label="Descrição"
+            variant="outlined"
+            density="compact"
+            rows="3"
+            class="mb-3"
+          ></v-textarea>
+          <v-text-field
+            v-model="editEvent.people"
+            label="Pessoas Selecionadas"
+            variant="outlined"
+            density="compact"
+          ></v-text-field>
+          <v-select
+            v-model="editEvent.color"
+            :items="availableColors"
+            label="Cor do Evento"
+            variant="outlined"
+            density="compact"
+            item-title="text"
+            item-value="value"
+            class="mt-3"
+          >
+            <template v-slot:item="{ props, item }">
+              <v-list-item v-bind="props" :title="item.raw.text">
+                <template v-slot:prepend>
+                  <v-icon :color="item.raw.value">mdi-circle</v-icon>
+                </template>
+              </v-list-item>
+            </template>
+          </v-select>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn variant="flat" color="red" @click="editEventDialog = false"
+            >Cancelar</v-btn
+          >
+          <v-btn
+            :loading="loadingEdit"
+            variant="flat"
+            color="#6A1B9A"
+            @click="saveEditedEvent"
+            >Salvar Alterações</v-btn
+          >
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-dialog v-model="confirmDeleteDialog" max-width="400px">
+      <v-card class="add-event-dialog-title" rounded="lg" elevation="10">
+        <v-card-title class="text-h6 py-4"> Confirmar Exclusão </v-card-title>
+        <v-card-text class="text-subtitle-1 px-6">
+          Tem certeza que deseja excluir a ministração "<strong>{{
+            selectedEvent.name
+          }}</strong
+          >"? Esta ação não poderá ser desfeita.
+        </v-card-text>
+        <v-card-actions class="justify-end px-6 pb-4">
+          <v-btn variant="flat" color="grey" @click="confirmDeleteDialog = false"
+            >Cancelar</v-btn
+          >
+          <v-btn
+            :loading="loadingDelete"
+            variant="flat"
+            color="red-darken-2"
+            @click="confirmDeleteEvent"
+            >Excluir</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -155,52 +258,15 @@ export default defineComponent({
   name: "CalendarScreen",
   data() {
     return {
+      loadingSalvar: false,
+      loadingEdit: false,
+      loadingDelete: false,
       currentDate: moment(),
       weekDays: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
-      events: [
-        {
-          id: 1,
-          name: "Reunião de Equipe",
-          date: "2025-07-15",
-          description: "Reunião semanal para discutir o progresso do projeto.",
-          color: "blue-lighten-2",
-          people: ["João", "Maria"],
-        },
-        {
-          id: 2,
-          name: "Lançamento do Produto",
-          date: "2025-07-28",
-          description: "Evento de lançamento do nosso novo produto.",
-          color: "green-lighten-2",
-          people: ["Carlos", "Ana", "Pedro"],
-        },
-        {
-          id: 3,
-          name: "Feriado",
-          date: "2025-07-04",
-          description: "Feriado nacional.",
-          color: "red-lighten-2",
-          people: [],
-        },
-        {
-          id: 4,
-          name: "Workshop de Vue",
-          date: "2025-08-10",
-          description: "Workshop prático sobre Vue 3 e Vuetify.",
-          color: "purple-lighten-2",
-          people: ["Paula"],
-        },
-        {
-          id: 5,
-          name: "Consulta Médica",
-          date: "2025-07-28",
-          description: "Consulta de rotina com o Dr. Silva.",
-          color: "orange-lighten-2",
-          people: ["Dr. Silva"],
-        },
-      ],
+      events: [],
       selectedEvent: {},
       addEventDialog: false,
+      confirmDeleteDialog: false,
       newEvent: {
         name: "",
         date: "",
@@ -208,17 +274,15 @@ export default defineComponent({
         color: "blue-lighten-2",
         people: "",
       },
-      availablePeople: [
-        "João",
-        "Maria",
-        "Carlos",
-        "Ana",
-        "Pedro",
-        "Paula",
-        "Lucas",
-        "Mariana",
-        "Dr. Silva",
-      ],
+      editEventDialog: false,
+      editEvent: {
+        id: null,
+        name: "",
+        date: "",
+        description: "",
+        color: "",
+        people: "",
+      },
       availableColors: [
         { text: "Azul Claro", value: "blue-lighten-2" },
         { text: "Verde Claro", value: "green-lighten-2" },
@@ -268,10 +332,12 @@ export default defineComponent({
     previousMonth() {
       this.currentDate = this.currentDate.clone().subtract(1, "month");
       this.selectedEvent = {};
+      this.getEvents();
     },
     nextMonth() {
       this.currentDate = this.currentDate.clone().add(1, "month");
       this.selectedEvent = {};
+      this.getEvents();
     },
     getEventsForDay(date) {
       return this.events.filter((event) => event.date === date);
@@ -284,17 +350,25 @@ export default defineComponent({
         name: "",
         date: date,
         description: "",
-        color: "blue-lighten-2",
-        people: [],
+        color: "",
+        people: "",
       };
       this.addEventDialog = true;
     },
     async saveNewEvent() {
+      if (
+        !this.newEvent.name ||
+        !this.newEvent.description ||
+        !this.newEvent.color ||
+        !this.newEvent.people
+      ) {
+        this.$root.showToast("Por favor preencha todas as informações", "info");
+        return;
+      }
       try {
+        this.loadingSalvar = true;
         await this.HTTP("post", "ministracoes/add-ministracao", this.newEvent);
-
         this.addEventDialog = false;
-
         this.newEvent = {
           name: "",
           date: "",
@@ -303,11 +377,95 @@ export default defineComponent({
           people: "",
         };
         this.$root.showToast("Ministração adicionada com sucesso!", "success");
+        await this.getEvents();
+        this.loadingSalvar = false;
       } catch (error) {
+        this.loadingSalvar = false;
         console.error(error);
         this.$root.showToast("Erro ao adicionar ministração.");
       }
     },
+
+    async getEvents() {
+      try {
+        const resp = await this.HTTP("get", "ministracoes/get-ministracoes");
+
+        this.events = resp.map((apiEvent) => ({
+          id: apiEvent.ID_MINISTRACAO,
+          name: apiEvent.TITULO_MINISTRACAO,
+          date: moment(apiEvent.DATA_MINISTRACAO).format("YYYY-MM-DD"),
+          description: apiEvent.DESCRICAO_MINISTRACAO,
+          people: apiEvent.USER_MINISTRACAO || "",
+          color: apiEvent.COR_MINISTRACAO,
+        }));
+      } catch (error) {
+        console.error("Erro ao carregar eventos da API:", error);
+        this.$root.showToast("Erro ao carregar eventos.", "error");
+      }
+    },
+
+    deleteSelectedEvent() {
+      this.confirmDeleteDialog = true;
+    },
+
+    editSelectedEvent() {
+      this.editEvent = { ...this.selectedEvent };
+      this.editEventDialog = true;
+    },
+
+    async confirmDeleteEvent() {
+      try {
+        this.loadingDelete = true;
+        await this.HTTP("post", "ministracoes/delete-ministracao", {
+          id: this.selectedEvent.id,
+        });
+        this.$root.showToast("Ministração excluída com sucesso!", "success");
+        this.selectedEvent = {};
+        this.getEvents();
+        this.loadingDelete = false;
+      } catch (error) {
+        console.error("Erro ao deletar ministração:", error);
+        this.$root.showToast("Erro ao deletar ministração.", "error");
+        this.loadingDelete = false;
+      } finally {
+        this.confirmDeleteDialog = false;
+        this.loadingDelete = false;
+      }
+    },
+
+    async saveEditedEvent() {
+      if (
+        !this.editEvent.name ||
+        !this.editEvent.description ||
+        !this.editEvent.color ||
+        !this.editEvent.people
+      ) {
+        this.$root.showToast("Por favor preencha todos os campos.", "info");
+        return;
+      }
+
+      try {
+        this.loadingEdit = true;
+        const params = {
+          event: this.editEvent,
+        };
+
+        await this.HTTP("post", "ministracoes/update-ministracao", params);
+        this.$root.showToast("Ministração atualizada com sucesso!", "success");
+        this.editEventDialog = false;
+        this.selectedEvent = {};
+        this.getEvents();
+        this.loadingEdit = false;
+      } catch (error) {
+        this.loadingEdit = false;
+        console.error("Erro ao editar ministração:", error);
+        this.$root.showToast("Erro ao editar ministração.", "error");
+      }
+    },
+  },
+
+  mounted() {
+    this.getEvents();
   },
 });
 </script>
@@ -396,7 +554,7 @@ export default defineComponent({
   position: relative;
   overflow: hidden;
   transition: background-color 0.3s ease;
-  cursor: pointer; /* Adiciona um cursor de ponteiro para indicar que é clicável */
+  cursor: pointer;
 }
 
 .calendar-day:last-child {
@@ -411,12 +569,6 @@ export default defineComponent({
 
 .text-grey-lighten-1 {
   color: #bdbdbd !important;
-}
-
-.current-day {
-  background-color: #ffebee;
-  border-radius: 8px;
-  box-shadow: inset 0 0 8px rgba(248, 187, 208, 0.3);
 }
 
 .calendar-day.has-events {
@@ -455,13 +607,13 @@ export default defineComponent({
 .event-details-sheet {
   background: linear-gradient(to top left, #fffde7, #f0f4c3);
   width: 100%;
-  height: 230px; /* Mantive a altura para ocupar o espaço consistentemente */
+  height: 230px;
   max-width: 500px;
-  display: flex; /* Para centralizar o texto "Nenhum evento escolhido ainda..." */
+  display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  text-align: center; /* Garante que o texto esteja centralizado */
+  text-align: center;
 }
 
 .event-details-title {
@@ -482,7 +634,6 @@ export default defineComponent({
   color: #ad1457;
 }
 
-/* Estilos para o novo diálogo de adicionar evento */
 .add-event-dialog-title {
   color: #6a1b9a;
   font-weight: 700;
