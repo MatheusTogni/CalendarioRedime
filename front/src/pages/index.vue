@@ -107,16 +107,12 @@
             rows="3"
             class="mb-3"
           ></v-textarea>
-          <v-autocomplete
+          <v-text-field
             v-model="newEvent.people"
-            :items="availablePeople"
             label="Pessoas Selecionadas"
-            multiple
-            chips
-            closable-chips
             variant="outlined"
             density="compact"
-          ></v-autocomplete>
+          ></v-text-field>
           <v-select
             v-model="newEvent.color"
             :items="availableColors"
@@ -138,8 +134,10 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="red-lighten-2" @click="addEventDialog = false">Cancelar</v-btn>
-          <v-btn color="green-lighten-2" @click="saveNewEvent">Salvar</v-btn>
+          <v-btn variant="flat" color="red" @click="addEventDialog = false"
+            >Cancelar</v-btn
+          >
+          <v-btn variant="flat" color="#6A1B9A" @click="saveNewEvent">Salvar</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -202,15 +200,13 @@ export default defineComponent({
         },
       ],
       selectedEvent: {},
-      addEventDialog: false, // Controla a visibilidade do diálogo de adicionar evento
+      addEventDialog: false,
       newEvent: {
-        // Objeto para armazenar os dados do novo evento
-        id: null,
         name: "",
         date: "",
         description: "",
-        color: "blue-lighten-2", // Cor padrão
-        people: [],
+        color: "blue-lighten-2",
+        people: "",
       },
       availablePeople: [
         "João",
@@ -284,24 +280,33 @@ export default defineComponent({
       this.selectedEvent = event;
     },
     openAddEventDialog(date) {
-      // Abre o diálogo para adicionar evento e preenche a data
       this.newEvent = {
-        id: Date.now(), // Gera um ID único simples
         name: "",
         date: date,
         description: "",
-        color: "blue-lighten-2", // Cor padrão
+        color: "blue-lighten-2",
         people: [],
       };
       this.addEventDialog = true;
     },
-    saveNewEvent() {
-      let teste
+    async saveNewEvent() {
+      try {
+        await this.HTTP("post", "ministracoes/add-ministracao", this.newEvent);
 
-      const params = {
-        teste: teste
+        this.addEventDialog = false;
+
+        this.newEvent = {
+          name: "",
+          date: "",
+          description: "",
+          color: "blue-lighten-2",
+          people: "",
+        };
+        this.$root.showToast("Ministração adicionada com sucesso!", "success");
+      } catch (error) {
+        console.error(error);
+        this.$root.showToast("Erro ao adicionar ministração.");
       }
-      this.HTTP("post", '/ministracoes/add-ministracao', params)
     },
   },
 });
@@ -483,7 +488,7 @@ export default defineComponent({
   font-weight: 700;
   text-align: center;
   padding-bottom: 10px;
-  background-color:#FFFFFF;
+  background-color: #ffffff;
   border-bottom: 1px solid rgba(248, 187, 208, 0.5);
 }
 
